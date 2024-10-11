@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <title>BozKurtChat</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />   
+    <meta name="author" content="Ali">
+    <meta name="keywords" content="sohbet, bozkurtchat, bozkurt, bozkurt chat, bozkurt sohbet, bozkurt, sohbet, discord">
+    <meta name="description" content="BozKurtChat bir sohbet uygulamasıdır ve Discord`a biraz benzer.">
+    <meta name="language" content="Turkish">
+    <meta http-equiv="content-language" content="tr">
+
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="BozKurtChat">
+    <meta property="og:description" content="BozKurtChat bir sohbet uygulamasıdır ve Discord`a biraz benzer.">
+    <meta property="og:url" content="https://b9428b6f-093f-432c-8e13-d0c1db24af67-00-1mylm9ludl2vk.sisko.replit.dev/">
+    <meta property="og:image" content="/assets/logo.png">
+   <!-- <meta property="og:image" content="https://api.microlink.io/?url=https://b9428b6f-093f-432c-8e13-d0c1db24af67-00-1mylm9ludl2vk.sisko.replit.dev&screenshot=true&meta=false&embed=screenshot.url"> -->
+    <meta property="og:image:secure_url" content="/assets/logo.png">
+    <meta property="og:image:width" content="256">
+    <meta property="og:image:height" content="256">
+    <meta property="og:image:alt" content="BozKurtChat Logo">
+    <meta name="viewport" content="width=device-width, initial-scale=0.9">
+     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+     <link rel="icon" type="image/x-icon" href="/favicon.ico">
+     <link rel="manifest" href="/site.webmanifest">
+  <style>
+    body {
+      font-family: "Roboto", sans-serif;
+      font-weight: bold;
+      font-style: normal;
+      background-color: #f5f5f5; /* Light gray background */
+    }
+
+    #messages {
+      height: 400px;
+      overflow-y: scroll;
+      border: 1px solid #ddd; /* Add a border to the message list */
+      border-radius: 5px; /* Add rounded corners to the message list */
+    }
+
+    .message {
+      padding: 15px; /* Increase padding for better readability */
+      margin-bottom: 10px; /* Adjust margin for spacing */
+      border-radius: 5px;
+      background-color: #eee; /* Light background for messages */
+    }
+
+    .username {
+      font-weight: bold;
+      color: #333; /* Darker text color for usernames */
+    }
+
+    .user1 {
+      background-color: #e0f0ff; /* Blue background for even messages */
+    }
+
+    .user2 {
+      background-color: #ffe0f0; /* Pink background for odd messages */
+    }
+
+    .message-container {
+      display: flex;
+      align-items: center;
+      background-color: #333; /* Match the dark background from the image */
+      border-radius: 10px; /* Add rounded corners to match the overall design */
+      padding: 10px;
+    }
+
+    #messageInput {
+      flex-grow: 1;
+      padding: 10px;
+      background-color: white;
+      border: none; /* Remove default border */
+      border-radius: 5px; /* Add slight border radius */
+      color: #333; /* Match the text color from the image */
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50; /* Green color */
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .info-message {
+      font-style: italic; /* Italic font style for info messages */
+      color: #666; /* Gray text color for info messages */
+    }
+
+    #logo {
+      position: fixed;
+      top: 20px;
+      right: 10px;
+      width: 50px; /* Reduced width to 5px */
+      height: 50px; /* Added height for square shape */
+    }
+    audio {
+      display: none;
+    }
+
+
+  </style>
+</head>
+<body>
+  <center>
+    <img src="assets/logo.png" alt="BozKurtChat Logo" id="logo">
+    <h1>BozKurtChat</h1>
+    <h3>Bu sitede diğer insanlarla sohbet edebilirsin</h3>
+  <input type="text" id="usernameInput" placeholder="Kullanıcı adı girin..." required>
+  <button id="usernameButton" onclick="setUsername()">Kullanıcı Adını Ayarla</button>
+  <br>
+  <div id="messages"></div>
+    <div class="message-container">
+      <input type="text" id="messageInput" placeholder="Mesajınızı buraya yazın..." onkeydown="handleKeyDown(event)" required>
+      <button onclick="sendMessage()">Gönder</button>
+      <button id="soundmuteButton" onclick="soundsMute()">Sesi kapat/aç</button>
+    </div>
+    <audio id="bozkurtchat-1" controls>
+      <source src="assets/mesajalmaSesi.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="bozkurtchat-2" controls>
+      <source src="assets/mesajgondermeSesi.mp3" type="audio/mpeg">
+    </audio>
+    </center>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+  <script>
+    const socket = io(); // Connect to the server
+    const usernameInput = document.getElementById('usernameInput');
+    const usernameButton = document.getElementById('usernameButton');
+    const audio1 = document.getElementById("bozkurtchat-1");
+    const audio2 = document.getElementById("bozkurtchat-2");
+    let isMuted = false; // Başlangıçta seslerin açık olduğunu
+
+    // Audioyu oynatma fonksiyonu
+    function playAudio1() {
+      audio1.play();
+    }
+    // Audioyu oynatma fonksiyonu
+    function playAudio2() {
+      audio2.play();
+    }
+    function soundsMute() {
+      isMuted = !isMuted; // Durumu tersine çevir
+
+      audio1.muted = isMuted;
+      audio2.muted = isMuted;
+    }
+
+
+    function setUsername() {
+      username = document.getElementById('usernameInput').value;
+
+      // Trim the username to remove leading/trailing spaces
+      username = username.trim();
+
+      socket.on('nameusederror', (errorMessage) => {
+        alert(errorMessage);
+         return;
+      });
+      // Check for empty username
+      if (username === "") {
+        alert("Lütfen boşluk yerine geçerli bir kullanıcı adı giriniz.");
+        return;
+      }
+
+      // Check for special characters
+      const allowedChars = /^[a-zA-Z0-9]+$/;
+      if (!allowedChars.test(username)) {
+        alert("Kullanıcı adı sadece harf ve rakam içerebilir. Özel karakterler kullanılamaz.");
+        return;
+      }
+
+      // Check for caps lock limit
+      const capsLockCount = username.match(/[A-Z]/g)?.length || 0;
+      if (capsLockCount > 5) {
+        alert("Kullanıcı adı en fazla 5 büyük harf içerebilir.");
+        return;
+      }
+
+      // Check for character limit
+      if (username.length > 10) {
+        alert("Kullanıcı adı en fazla 10 karakter olabilir.");
+        return;
+      }
+
+      socket.emit('username', username);
+      document.getElementById('usernameInput').disabled = true;
+      document.getElementById('usernameInput').style.display = 'none';
+      document.getElementById('usernameButton').style.display = 'none';
+      console.log(`BozKurtChate ${username} adında girildi`);
+    }
+
+    let lastMessageTime = 0;
+    const minMessageInterval = 1000;
+
+    function sendMessage() {
+      const messageInput = document.getElementById('messageInput');
+      const message = messageInput.value.trim();
+      const currentTime = Date.now();
+      const maxMessageLength = 60;
+      const maxCaps = 10; // Maksimum büyük harf sayısı
+      // Büyük harf sayısını hesaplayan fonksiyon
+      function countCaps(str) {
+        // Unicode büyük harfleri temsil eden karakter sınıfı
+        return str.match(/[\p{Lu}]/gu)?.length || 0;
+      }
+      // Kullanıcı adı ve mesaj kontrolü
+      if (username && message !== "") {
+        // Karakter sınırı ve büyük harf kontrolü
+        if (message.length <= maxMessageLength && countCaps(message) <= maxCaps) {
+          // Son mesaj gönderim zamanından itibaren minimum süre geçmiş mi?
+          playAudio2();
+           console.log(`Mesaj attın. Mesaj: ${message}`)
+          if (currentTime - lastMessageTime >= minMessageInterval) {
+            socket.emit('chat message', message);
+            messageInput.value = '';
+            lastMessageTime = currentTime;
+          } else {
+            alert(`Lütfen mesajlar arasında en az ${minMessageInterval / 1000} saniye bekleyiniz.`);
+          }
+        } else {
+          if (message.length > maxMessageLength) {
+            alert(`Mesajınız çok uzun. Lütfen ${maxMessageLength} karakteri geçmeyiniz.`);
+          } else {
+            alert(`Lütfen mesajınızda ${maxCaps} adetten fazla büyük harf kullanmayınız.`);
+          }
+        }
+      } else {
+        if (!username) {
+          alert("Lütfen önce kullanıcı adınızı ayarlayın.");
+        } else {
+          alert("Boş mesaj gönderilemez.");
+        }
+      }
+    }
+
+
+    socket.on('chat message', (msg) => {
+        const sender = msg.split(':')[0];
+
+        // Eğer mesaj gönderen kullanıcı senin kullanıcı adın değilse audioyu çal
+        if (sender !== username) {
+            playAudio1();
+        }
+
+        const messages = document.getElementById('messages');
+        const item = document.createElement('li');
+        item.classList.add('message');
+
+        const usernameSpan = document.createElement('span');
+        usernameSpan.classList.add('username');
+        // Eğer gönderen sizin kullanıcı adınızsa "Sen" yazdırın, değilse kullanıcı adını gösterin
+        usernameSpan.textContent = (sender === username) ? 'Siz: ' : sender + ': ';
+
+        const messageSpan = document.createElement('span');
+        messageSpan.textContent = msg.split(':')[1].trim(); // Extract message
+
+        item.appendChild(usernameSpan);
+        item.appendChild(messageSpan);
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight; // Scroll to bottom on new message
+    });
+
+    socket.on('kullanıcı katıldı', (username) => {
+        // Kullanıcı adı boşluk ise işlemi durdur
+        if (username.trim() === '') {
+            return;
+        }
+
+        const messages = document.getElementById('messages');
+        const item = document.createElement('li');
+        item.textContent = `${username} sohbete katıldı`;
+        item.classList.add('info-message');
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
+    });
+
+    socket.on('kullanıcı ayrıldı', (username) => {
+        // Kullanıcı adı boşluk ise işlemi durdur
+        if (username.trim() === '') {
+            return;
+        }
+
+        const messages = document.getElementById('messages');
+        const item = document.createElement('li');
+        item.textContent = `${username} sohbetten ayrıldı`;
+        item.classList.add('info-message');
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
+    });
+
+
+    function handleKeyDown(event) {
+        if (event.keyCode === 13) {
+                sendMessage();
+            }
+        }
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <title>BozKurtChat</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />   
+  <meta name="author" content="Ali">
+  <meta name="keywords" content="sohbet, bozkurtchat, bozkurt, bozkurt chat, bozkurt sohbet, bozkurt, sohbet, discord">
+  <meta name="description" content="BozKurtChat bir sohbet uygulamasıdır ve Discord`a biraz benzer.">
+  <meta name="language" content="Turkish">
+  <meta http-equiv="content-language" content="tr">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="BozKurtChat">
+  <meta property="og:description" content="BozKurtChat bir sohbet uygulamasıdır ve Discord`a biraz benzer.">
+  <meta property="og:url" content="https://b9428b6f-093f-432c-8e13-d0c1db24af67-00-1mylm9ludl2vk.sisko.replit.dev/">
+  <meta property="og:image" content="/assets/logo.png">
+ <!-- <meta property="og:image" content="https://api.microlink.io/?url=https://b9428b6f-093f-432c-8e13-d0c1db24af67-00-1mylm9ludl2vk.sisko.replit.dev&screenshot=true&meta=false&embed=screenshot.url"> -->
+  <meta property="og:image:secure_url" content="/assets/logo.png">
+  <meta property="og:image:width" content="256">
+  <meta property="og:image:height" content="256">
+  <meta property="og:image:alt" content="BozKurtChat Logo">
+  <meta name="viewport" content="width=device-width, initial-scale=0.9">
+   <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+   <link rel="icon" type="image/x-icon" href="/favicon.ico">
+   <link rel="manifest" href="/site.webmanifest">
+   <link rel="stylesheet" href="/assets/styles.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.css">
+</head>
+<body>
+  <noscript><center><h1>Bu uygulamayı çalıştırmak için JavaScript'i etkinleştirmeniz gerekir.</h1><img src="/assets/jsnasilAcilir.gif">
+  <style>#center {display: none;} noscript {font-weight: bold;}</style></center></noscript>
+  <center id="center">
+    <img src="https://b9428b6f-093f-432c-8e13-d0c1db24af67-00-1mylm9ludl2vk.sisko.replit.dev/assets/logo.png" alt="BozKurtChat Logo" id="logo">
+    <h1 id="h1">BozKurtChat🤘🐺</h1>
+    <h2 id="h2">Bu sitede diğer insanlarla sohbet edebilirsin</h2>
+  <input type="text" id="usernameInput" placeholder="Kullanıcı adı girin..." onkeydown="handleKeyDown(event)" required>
+  <button id="usernameButton" onclick="setUsername()">Kullanıcı Adını Ayarla</button>
+  <br>
+  <div id="messages"></div>
+    <div class="message-container">
+      <input type="text" id="messageInput" placeholder="Mesajınızı buraya yazın..." onkeydown="handleKeyDown(event)" required>
+      <button onclick="sendMessage()">Gönder</button>
+      <button id="soundmuteButton" onclick="soundsMute()">Sesi kapat/aç</button>
+    </div>
+    <audio id="messagereceivedSound" controls>
+      <source src="/assets/mesajalmaSesi.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="sendmessageSound" controls>
+      <source src="/assets/mesajgondermeSesi.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="relaxMusic" controls loop>
+      <source src="/assets/relaxMuzigi.mp3" type="audio/mpeg">
+    </audio>
+    </center>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/2.1.4/toastr.min.js"></script>
+ <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+  <script>
+    const socket = io(); // Connect to the server
+    const usernameInput = document.getElementById('usernameInput');
+    const usernameButton = document.getElementById('usernameButton');
+    const messagereceivedSound = document.getElementById("messagereceivedSound");
+    const sendmessageSound = document.getElementById("sendmessageSound");
+    const relaxMusic = document.getElementById("relaxMusic");
+    const h1Element = document.getElementById('h1');
+    const h2Element = document.querySelectorAll('h2');
+    let isMuted = false; // Başlangıçta seslerin açık olduğunu
+    toastr.options = {
+      "closeButton": true,
+      "debug": false,
+      "newestOnTop": false,
+      "progressBar": true,
+      "positionClass": "toast-top-right",
+      "preventDuplicates": false,
+      "onclick": null,
+      "showDuration": "300",
+      "hideDuration": "1000",
+      "timeOut": "3000",
+      "extendedTimeOut": "1000",
+      "showEasing": "swing",
+      "hideEasing": "linear",
+      "showMethod": "fadeIn",
+      "hideMethod": "fadeOut"
+    }
+    function soundsMute() {
+      isMuted = !isMuted; // Durumu tersine çevir
+
+      messagereceivedSound.muted = isMuted;
+      sendmessageSound.muted = isMuted;
+    }
+
+
+    function setUsername() {
+      username = document.getElementById('usernameInput').value;
+
+      // Trim the username to remove leading/trailing spaces
+      username = username.trim();
+      
+      socket.on('nameusederror', (errorMessage) => {
+        toastr.error(errorMessage, 'Hata');
+         return;
+      });
+      // Check for empty username
+      if (username === "") {
+        toastr.error('Lütfen boşluk yerine geçerli bir kullanıcı adı giriniz.', 'Hata');
+        return;
+      }
+
+      // Check for special characters
+      const allowedChars = /^[a-zA-Z0-9]+$/;
+      if (!allowedChars.test(username)) {
+        toastr.error('Kullanıcı adı sadece harf ve rakam içerebilir. Özel karakterler kullanılamaz.', 'Hata');
+        return;
+      }
+
+      // Check for caps lock limit
+      const capsLockCount = username.match(/[A-Z]/g)?.length || 0;
+      if (capsLockCount > 5) {
+        toastr.error('Kullanıcı adı en fazla 5 büyük harf içerebilir.', 'Hata');
+        return;
+      }
+
+      // Check for character limit
+      if (username.length > 10) {
+        toastr.error('Kullanıcı adı en fazla 10 karakter olabilir.', 'Hata');
+        return;
+      }
+      
+      socket.emit('username', username);
+      document.getElementById('usernameInput').disabled = true;
+      document.getElementById('usernameInput').style.display = 'none';
+      document.getElementById('usernameButton').style.display = 'none';
+      usernameInput.value = '';
+      console.log(`BozKurtChate ${username} adında girildi`);
+    }
+
+    let lastMessageTime = 0;
+    const minMessageInterval = 1000;
+
+    function sendMessage() {
+      const messageInput = document.getElementById('messageInput');
+      const message = messageInput.value.trim();
+      const currentTime = Date.now();
+      const maxMessageLength = 120;
+      const maxCaps = 10; // Maksimum büyük harf sayısı
+      // Büyük harf sayısını hesaplayan fonksiyon
+      function countCaps(str) {
+        // Unicode büyük harfleri temsil eden karakter sınıfı
+        return str.match(/[\p{Lu}]/gu)?.length || 0;
+      }
+      // Kullanıcı adı ve mesaj kontrolü
+      if (username && message !== "") {
+        // Karakter sınırı ve büyük harf kontrolü
+        if (message.length <= maxMessageLength && countCaps(message) <= maxCaps) {
+          // Son mesaj gönderim zamanından itibaren minimum süre geçmiş mi?
+          
+          sendmessageSound.play();
+           console.log(`Mesaj attın. Mesaj: ${message}`)
+          if (currentTime - lastMessageTime >= minMessageInterval) {
+            socket.emit('chat message', message);
+            messageInput.value = '';
+            lastMessageTime = currentTime;
+          } else {
+            toastr.error(`Lütfen mesajlar arasında en az ${minMessageInterval / 1000} saniye bekleyiniz.`, 'Hata');
+          }
+        } else {
+          if (message.length > maxMessageLength) {
+            toastr.error(`Mesajınız çok uzun. Lütfen ${maxMessageLength} karakteri geçmeyiniz.`, 'Hata');
+          } else {
+            toastr.error(`Lütfen mesajınızda ${maxCaps} adetten fazla büyük harf kullanmayınız.`, 'Hata');
+          }
+        }
+      } else {
+        if (!username) {
+          toastr.error('Lütfen önce kullanıcı adınızı ayarlayın.', 'Hata');
+        } else {
+          toastr.error('Boş mesaj gönderilemez.', 'Hata');
+        }
+      }
+    }
+
+
+    socket.on('chat message', (msg) => {
+        const sender = msg.split(':')[0];
+
+      if (sender !== username) {
+        messagereceivedSound.play();
+      }
+
+        const messages = document.getElementById('messages');
+        const item = document.createElement('li');
+        item.classList.add('message');
+
+        const usernameSpan = document.createElement('span');
+        usernameSpan.classList.add('username');
+        usernameSpan.textContent = (sender === username) ? 'Siz: ' : sender + ': ';
+
+        const messageSpan = document.createElement('span');
+        messageSpan.textContent = msg.split(':')[1].trim(); // Extract message
+
+        item.appendChild(usernameSpan);
+        item.appendChild(messageSpan);
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight; // Scroll to bottom on new message
+    });
+
+    socket.on('kullanıcı katıldı', (username) => {
+        // Kullanıcı adı boşluk ise işlemi durdur
+        if (username.trim() === '') {
+            return;
+        }
+      const randomJoinMessages = [
+        `${username} sohbete daldı! `,
+        `${username} sohbete bomba gibi düştü! `,
+        `${username} sohbetin yeni kralı! `,
+        `${username} sohbete partiyi getirdi! `,
+        `${username} sohbeti şenlendirmeye geldi! `,
+        `${username} sohbete pizza getirerek geldi! `,
+        `${username} sohbetin kapısı kırarak geldi! `,
+        `${username} partili sohbete geldi! `,
+        `${username} burda! `,
+        `${username} seni aramızda görmek iyi oldu! `,
+        `${username} sohbete atladı. Kanguru!! `,
+        `Kartal ${username} uçarak sohbete katıldı! `,
+        `${username} spawnlanarak sohbete katıldı! `,
+        `${username} zortlayarak sohbete katıldı! `,
+        `${username} is coming! (${username} geliyor!) `,
+        `${username} sohbete geç kaldı! `,
+        `${username} 💬 FBI OPEN THE DOOR! `,
+      ];
+     const randomJoinMessage = Math.floor(Math.random() * randomJoinMessages.length);
+        const messages = document.getElementById('messages');
+        const item = document.createElement('li');
+      item.textContent = randomJoinMessages[randomJoinMessage];
+        item.classList.add('info-message');
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
+    });
+
+    socket.on('kullanıcı ayrıldı', (username) => {
+        // Kullanıcı adı boşluk ise işlemi durdur
+        if (username.trim() === '') {
+            return;
+        }
+
+        const messages = document.getElementById('messages');
+        const item = document.createElement('li');
+        item.textContent = `${username} sohbetten ayrıldı`;
+        item.classList.add('info-message');
+        messages.appendChild(item);
+        messages.scrollTop = messages.scrollHeight;
+    });
+
+    socket.on('disconnect', () => {
+   //   window.location.href = "https://comtelos.my.canva.site/bozkurtchat-error1";
+      Swal.fire({
+        title: 'Hata',
+        text: 'Oops! Sunucu ile bağlantı kesildi',
+        icon: 'error',
+      })
+    });
+    
+      function handleKeyDown(event) {
+          if (event.keyCode === 13) {
+              const activeElement = document.activeElement;
+              if (activeElement.id === 'usernameInput') {
+                  setUsername();
+              } else if (activeElement.id === 'messageInput') {
+                  sendMessage();
+              }
+          }
+      }
+
+    function getRandomColor() {
+      const r = Math.floor(Math.random() * 256);
+      const g = Math.floor(Math.random() * 256);
+      const b = Math.floor(Math.random() * 256);
+      return `rgb(${r}, ${g}, ${b})`;
+    }
+
+    // Renkleri her 100 milisaniyede değiştirmek için setInterval kullanın
+    const intervalId = setInterval(() => {
+      h1Element.style.color = getRandomColor();
+      h2Element.forEach(h2 => {
+        h2.style.color = getRandomColor();
+        h1Element.style.transition = 'color 1s ease-in-out';
+        h2Element.forEach(h2 => {
+          h2.style.transition = 'color 1s ease-in-out';
+        });
+      });
+    }, 500);
+
+    document.addEventListener('visibilitychange',        function() {
+      if (document.visibilityState === 'hidden') {
+        document.title = "Geri gel lüften!";
+      } else {
+        document.title = "BozKurtChat";
+      }
+    });
+    document.addEventListener('keydown', function(event) {
+        if (event.ctrlKey && event.altKey && event.key === 'w') {
+            relaxMusic.play();
+            Swal.fire({
+                title: 'Sohbetler fazla gelebilir.',
+                text: 'Kurt ile rahatla.',
+                imageUrl: '/assets/dansedenKurt.gif',
+                imageWidth: 300,
+                imageHeight: 400,
+                imageAlt: 'Dans eden Kurt',
+                confirmButtonText: 'Sohbete dön'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    relaxMusic.pause();
+                    relaxMusic.currentTime = 0;
+                }
+            });
+        }
+    });
+  </script>
+</body>
+</html>
